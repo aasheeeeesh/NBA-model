@@ -26,7 +26,7 @@ Given a set of player attributes and performance metrics, the goal is to accurat
 ### ML Techniques & Architectures
 * **Feature Engineering:** Domain-specific calculations (True Shooting %, Per-game metrics, Assist-to-Turnover ratio, Starter Ratio).
 * **ColumnTransformer Pipeline:** Unified preprocessing handling numerical features (scaling & mean imputation) and categorical features (One-Hot Encoding) preventing data leakage.
-* **Hyperparameter Tuning:** Hyperparameter optimization via `GridSearchCV` on cross-validated training folds.
+* **Hyperparameter Tuning:** Bayesian Hyperparameter Optimization using the `hyperopt` library on cross-validated training folds.
 * **Stacked Generalization (Stacking):** Ensembles optimized Random Forest and HistGradientBoosting Regressors using a `RidgeCV` meta-learner to achieve high performance.
 
 ## 📊 Key Features
@@ -43,7 +43,7 @@ Given a set of player attributes and performance metrics, the goal is to accurat
 1. **Load Data:** Ingest NBA 2021 (Train) and NBA 2020 (Test) datasets.
 2. **Feature Engineering:** Compute True Shooting %, Starter Ratio, and per-game normalization.
 3. **Preprocessing:** Fit `SimpleImputer`, `StandardScaler`, and `OneHotEncoder` via `ColumnTransformer` inside pipelines.
-4. **Tuning:** Find optimal base model parameters via `GridSearchCV`.
+4. **Tuning:** Find optimal base model parameters via Bayesian optimization with `hyperopt`.
 5. **Stacking Ensemble:** Combine the optimized base regressors under a meta-learner.
 6. **Evaluation:** Output metrics on unseen 2020 testing data.
 7. **Visualization:** Plot Actual vs. Predicted values using `Seaborn.regplot`.

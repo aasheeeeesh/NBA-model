@@ -2,7 +2,7 @@
 """
 NBA Playing Time Prediction Model
 Author: Aashish Arya
-Optimized ML Pipeline with Feature Engineering, Hyperparameter Tuning, and Stacking Ensembles.
+Optimized ML Pipeline with Feature Engineering, Bayesian Hyperparameter Tuning (Hyperopt), and Stacking Ensembles.
 """
 
 import sys
@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
@@ -19,6 +19,9 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.linear_model import LinearRegression, RidgeCV
 from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor, StackingRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
+
+# Hyperopt Imports
+from hyperopt import hp, tpe, fmin, Trials, space_eval, STATUS_OK
 
 # 1. Feature Engineering (Domain-Specific Features)
 def engineer_features(df):
@@ -173,41 +176,103 @@ def main():
     lr_preds = lr_pipeline.predict(X_test)
     print(f"Linear Regression Baseline -> R2: {r2_score(y_test, lr_preds):.4f} | MAE: {mean_absolute_error(y_test, lr_preds):.2f} mins")
     
-    # Random Forest with Grid Search
-    rf_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor),
-        ('model', RandomForestRegressor(random_state=42))
-    ])
-    rf_param_grid = {
-        'model__n_estimators': [100, 200],
-        'model__max_depth': [10, 15, None],
-        'model__min_samples_split': [2, 5]
+    # Define hyperopt objectives and spaces
+    print("\nTuning models using Hyperopt (Bayesian Optimization)...")
+    
+    # --- Random Forest Tuning ---
+    rf_space = {
+        'n_estimators': hp.choice('n_estimators', [100, 200, 300]),
+        'max_depth': hp.choice('max_depth', [10, 15, None]),
+        'min_samples_split': hp.choice('min_samples_split', [2, 5, 10])
     }
-    print("Tuning Random Forest Regressor hyperparameters...")
-    rf_grid = GridSearchCV(rf_pipeline, rf_param_grid, cv=3, scoring='r2', n_jobs=-1)
-    rf_grid.fit(X_train, y_train)
-    best_rf = rf_grid.best_estimator_
+    
+    def rf_objective(params):
+        model = RandomForestRegressor(
+            n_estimators=params['n_estimators'],
+            max_depth=params['max_depth'],
+            min_samples_split=params['min_samples_split'],
+            random_state=42
+        )
+        pipeline = Pipeline(steps=[
+            ('preprocessor', preprocessor),
+            ('model', model)
+        ])
+        # Maximize R2 (equivalent to minimizing negative R2)
+        scores = cross_val_score(pipeline, X_train, y_train, cv=3, scoring='r2', n_jobs=-1)
+        return {'loss': -np.mean(scores), 'status': STATUS_OK}
+    
+    print("Tuning Random Forest Regressor...")
+    rf_trials = Trials()
+    best_rf_idx = fmin(
+        fn=rf_objective,
+        space=rf_space,
+        algo=tpe.suggest,
+        max_evals=10,
+        trials=rf_trials
+    )
+    best_rf_params = space_eval(rf_space, best_rf_idx)
+    print(f"Best RF Parameters: {best_rf_params}")
+    
+    # Train best RF Model
+    best_rf = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('model', RandomForestRegressor(
+            n_estimators=best_rf_params['n_estimators'],
+            max_depth=best_rf_params['max_depth'],
+            min_samples_split=best_rf_params['min_samples_split'],
+            random_state=42
+        ))
+    ])
+    best_rf.fit(X_train, y_train)
     rf_preds = best_rf.predict(X_test)
     print(f"Tuned Random Forest Regressor -> R2: {r2_score(y_test, rf_preds):.4f} | MAE: {mean_absolute_error(y_test, rf_preds):.2f} mins")
-    print(f"Best RF Parameters: {rf_grid.best_params_}")
     
-    # HistGradientBoosting with Grid Search
-    hgb_pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor),
-        ('model', HistGradientBoostingRegressor(random_state=42))
-    ])
-    hgb_param_grid = {
-        'model__learning_rate': [0.01, 0.05, 0.1],
-        'model__max_iter': [100, 200],
-        'model__max_depth': [3, 5, 8]
+    # --- HistGradientBoosting Tuning ---
+    hgb_space = {
+        'learning_rate': hp.uniform('learning_rate', 0.01, 0.2),
+        'max_iter': hp.choice('max_iter', [100, 200, 300]),
+        'max_depth': hp.choice('max_depth', [3, 5, 8, 12])
     }
-    print("Tuning HistGradientBoosting Regressor hyperparameters...")
-    hgb_grid = GridSearchCV(hgb_pipeline, hgb_param_grid, cv=3, scoring='r2', n_jobs=-1)
-    hgb_grid.fit(X_train, y_train)
-    best_hgb = hgb_grid.best_estimator_
+    
+    def hgb_objective(params):
+        model = HistGradientBoostingRegressor(
+            learning_rate=params['learning_rate'],
+            max_iter=params['max_iter'],
+            max_depth=params['max_depth'],
+            random_state=42
+        )
+        pipeline = Pipeline(steps=[
+            ('preprocessor', preprocessor),
+            ('model', model)
+        ])
+        scores = cross_val_score(pipeline, X_train, y_train, cv=3, scoring='r2', n_jobs=-1)
+        return {'loss': -np.mean(scores), 'status': STATUS_OK}
+    
+    print("Tuning HistGradientBoosting Regressor...")
+    hgb_trials = Trials()
+    best_hgb_idx = fmin(
+        fn=hgb_objective,
+        space=hgb_space,
+        algo=tpe.suggest,
+        max_evals=10,
+        trials=hgb_trials
+    )
+    best_hgb_params = space_eval(hgb_space, best_hgb_idx)
+    print(f"Best HGB Parameters: {best_hgb_params}")
+    
+    # Train best HGB Model
+    best_hgb = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('model', HistGradientBoostingRegressor(
+            learning_rate=best_hgb_params['learning_rate'],
+            max_iter=best_hgb_params['max_iter'],
+            max_depth=best_hgb_params['max_depth'],
+            random_state=42
+        ))
+    ])
+    best_hgb.fit(X_train, y_train)
     hgb_preds = best_hgb.predict(X_test)
     print(f"Tuned HistGradientBoosting    -> R2: {r2_score(y_test, hgb_preds):.4f} | MAE: {mean_absolute_error(y_test, hgb_preds):.2f} mins")
-    print(f"Best HGB Parameters: {hgb_grid.best_params_}")
     
     # 4. Ensemble Stacking Regressor
     print("\nTraining Ensemble Stacking Regressor...")
