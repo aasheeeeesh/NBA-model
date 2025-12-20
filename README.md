@@ -1,62 +1,54 @@
-# NBA Career-High Points Prediction Model 🏀
+# 🏀 NBA Player Performance Predictor (Minutes Played)
 
-A machine learning project that predicts the **maximum points scored by an NBA player in a single game during their career**, using historical performance and player statistics.
-
----
+A machine learning project that predicts the **Minutes Played (MP)** per game for NBA players based on their season statistics.
 
 ## 📌 Project Overview
+This project applies supervised machine learning techniques to analyze NBA player data from the **2021 season** to predict their playing time for the **2020 season**.
 
-This project applies supervised machine learning techniques to analyze NBA player data and estimate a player's **career-high single-game scoring potential**.  
-The model leverages historical statistics, feature engineering, and regression-based approaches to make accurate predictions.
-
----
+The model leverages historical statistics, feature engineering, and regression-based approaches to estimate how long a player stays on the court.
 
 ## 🧠 Problem Statement
+Given a set of player attributes and performance metrics, the goal is to accurately predict the **Minutes Played (MP)** per game.
 
-Given a set of player attributes and historical performance metrics, predict the **highest number of points a player is likely to score in one game over their career**.
-
----
+* **Input Features:** Age, Team, Position, Shooting %, Rebounds, Assists, etc.
+* **Target Variable:** Minutes Played (MP)
 
 ## ⚙️ Tech Stack
 
-- **Language:** Python  
-- **Libraries:**  
-  - NumPy  
-  - Pandas  
-  - Matplotlib / Seaborn  
-  - Scikit-learn  
-- **ML Techniques:**  
-  - Data preprocessing & feature engineering  
-  - Regression models  
-  - Model evaluation using error metrics  
+### Language
+* **Python**
 
----
+### Libraries
+* **Data Manipulation:** NumPy, Pandas
+* **Visualization:** Matplotlib, Seaborn
+* **Machine Learning:** Scikit-learn
 
-## 📊 Features Implemented
+### ML Techniques
+* **Data Preprocessing:** Imputation, One-Hot Encoding
+* **Pipeline Construction:** sklearn.pipeline
+* **Algorithms:** Linear Regression & Random Forest Regressor
+* **Metrics:** Mean Absolute Error (MAE), R² Score
 
-- Data cleaning and preprocessing of NBA player statistics  
-- Feature selection and transformation  
-- Training and evaluation of machine learning models  
-- Performance comparison using evaluation metrics  
-- Visualization of prediction results  
-
----
+## 📊 Key Features
+* **Automated Data Pipeline:** Handles missing values via Imputation and manages categorical data (Teams/Positions) using One-Hot Encoding.
+* **Model Comparison:** Performs a head-to-head comparison between a baseline Linear Regression model and an ensemble Random Forest model.
+* **Leakage Prevention:** Ensures fair evaluation by strictly separating Training (2021) and Testing (2020) datasets.
+* **Custom Accuracy Metric:** Implements a logic-based accuracy check to calculate the percentage of predictions that fall within a **±1 minute** tolerance of the actual time.
 
 ## 🧪 Model Workflow
-
-1. Load and preprocess NBA dataset  
-2. Perform exploratory data analysis (EDA)  
-3. Engineer relevant features  
-4. Train regression-based ML models  
-5. Evaluate model performance  
-6. Predict career-high points  
-
----
+1. **Load Data:** Ingest NBA 2021 (Train) and NBA 2020 (Test) datasets.
+2. **Preprocessing:**
+    * Drop rows with missing target values.
+    * Separate numeric and categorical features.
+    * Apply `SimpleImputer` and `OneHotEncoder` via a `ColumnTransformer`.
+3. **Training:** Fit models on the 2021 player data.
+4. **Evaluation:** Test the models on unseen 2020 data.
+5. **Visualization:** Plot Actual vs. Predicted values using `Seaborn.regplot`.
 
 ## 📈 Results
+The project compared two different algorithms. The **Random Forest model** significantly outperformed the Linear Regression baseline, capturing the complex non-linear relationships in player data.
 
-- The model successfully captures scoring trends across player careers  
-- Predictions align closely with actual career-high performances  
-- Demonstrates effective use of regression models for sports analytics  
-
----
+| Model | MAE (Lower is Better) | R² Score (Higher is Better) | Accuracy Description |
+| :--- | :--- | :--- | :--- |
+| **Linear Regression** | 2.50 mins | 89.2% | Good baseline, but higher error margin. |
+| **Random Forest** | **1.76 mins** | **93.9%** | Excellent. Captures complex patterns. |
